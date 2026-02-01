@@ -3,317 +3,429 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Global Flight Board | Time Monitor</title>
+    <title>TimeBoard // Global Sync</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
     
     <style>
         :root {
-            --led-yellow: #facc15;
-            --led-red: #ef4444;
-            --led-green: #22c55e;
-            --led-blue: #3b82f6;
-            --bg-dark: #0f172a;
-            --panel-bg: #1e293b;
+            --neon-cyan: #00f3ff;
+            --neon-pink: #ff00ff;
+            --neon-amber: #ffaa00;
+            --neon-lime: #ccff00;
+            --bg-dark: #050505;
+            --panel-bg: #0a0a0f;
         }
 
         body {
-            background-color: #000;
-            font-family: 'Rajdhani', sans-serif;
-            overflow-x: hidden;
+            background-color: var(--bg-dark);
+            color: #e0e0e0;
+            font-family: 'Orbitron', sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
         }
 
-        .font-mono-digital {
-            font-family: 'Share Tech Mono', monospace;
+        /* Animated Grid Background */
+        .grid-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 200%;
+            height: 200%;
+            background-image: 
+                linear-gradient(rgba(0, 243, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 243, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            transform: perspective(500px) rotateX(60deg) translateY(-100px) translateZ(-200px);
+            animation: gridMove 20s linear infinite;
+            z-index: -1;
+            pointer-events: none;
         }
 
-        /* CRT Scanline Effect */
-        .scanlines {
+        @keyframes gridMove {
+            0% { transform: perspective(500px) rotateX(60deg) translateY(0) translateZ(-200px); }
+            100% { transform: perspective(500px) rotateX(60deg) translateY(50px) translateZ(-200px); }
+        }
+
+        /* CRT Scanline & Flicker */
+        .crt-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(
+                rgba(18, 16, 16, 0) 50%, 
+                rgba(0, 0, 0, 0.25) 50%
+            );
+            background-size: 100% 4px;
+            z-index: 50;
+            pointer-events: none;
+            opacity: 0.3;
+        }
+        
+        .crt-flicker {
+            animation: flicker 0.15s infinite;
+            pointer-events: none;
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(
-                to bottom,
-                rgba(255,255,255,0),
-                rgba(255,255,255,0) 50%,
-                rgba(0,0,0,0.2) 50%,
-                rgba(0,0,0,0.2)
+            background: rgba(0, 255, 0, 0.02);
+            z-index: 49;
+            opacity: 0;
+        }
+
+        @keyframes flicker {
+            0% { opacity: 0.01; }
+            50% { opacity: 0.03; }
+            100% { opacity: 0.01; }
+        }
+
+        /* Typography & Glows */
+        .font-mono-tech {
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        .glow-text-cyan { text-shadow: 0 0 10px rgba(0, 243, 255, 0.7), 0 0 20px rgba(0, 243, 255, 0.5); }
+        .glow-text-pink { text-shadow: 0 0 10px rgba(255, 0, 255, 0.7), 0 0 20px rgba(255, 0, 255, 0.5); }
+        .glow-text-amber { text-shadow: 0 0 10px rgba(255, 170, 0, 0.7), 0 0 20px rgba(255, 170, 0, 0.5); }
+        .glow-text-lime { text-shadow: 0 0 10px rgba(204, 255, 0, 0.7), 0 0 20px rgba(204, 255, 0, 0.5); }
+
+        /* Card Styling with Segmented Underglow */
+        .time-card {
+            background: rgba(10, 10, 15, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            position: relative;
+            clip-path: polygon(
+                0 0, 
+                100% 0, 
+                100% calc(100% - 20px), 
+                calc(100% - 20px) 100%, 
+                0 100%
             );
-            background-size: 100% 4px;
-            pointer-events: none;
-            z-index: 50;
-            opacity: 0.6;
-        }
-
-        .glow-text {
-            text-shadow: 0 0 10px currentColor;
-        }
-
-        .blink {
-            animation: blinker 1.5s linear infinite;
-        }
-
-        @keyframes blinker {
-            50% { opacity: 0; }
-        }
-
-        .scroll-ticker {
-            animation: ticker 30s linear infinite;
-        }
-
-        @keyframes ticker {
-            0% { transform: translateX(100%); }
-            100% { transform: translateX(-100%); }
-        }
-
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #0f172a; 
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #334155; 
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #475569; 
-        }
-
-        .flight-row {
             transition: all 0.3s ease;
         }
-        .flight-row:hover {
-            background-color: rgba(255,255,255,0.05);
+
+        .time-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%);
+            pointer-events: none;
         }
+
+        /* The Segmented Underglow Effect */
+        .underglow-container {
+            position: absolute;
+            bottom: -2px;
+            left: 10%;
+            width: 80%;
+            height: 4px;
+            display: flex;
+            gap: 4px;
+            justify-content: center;
+        }
+
+        .glow-segment {
+            height: 100%;
+            flex: 1;
+            background: currentColor;
+            opacity: 0.3;
+            box-shadow: 0 0 10px currentColor;
+            animation: pulseSegment 2s infinite ease-in-out;
+        }
+
+        .glow-segment:nth-child(2n) { animation-delay: 0.2s; }
+        .glow-segment:nth-child(3n) { animation-delay: 0.4s; }
+        .glow-segment:nth-child(4n) { animation-delay: 0.6s; }
+
+        @keyframes pulseSegment {
+            0%, 100% { opacity: 0.2; height: 2px; }
+            50% { opacity: 1; height: 6px; box-shadow: 0 0 20px currentColor; }
+        }
+
+        /* Decorative Corner Markers */
+        .corner {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border: 2px solid currentColor;
+            transition: all 0.3s ease;
+        }
+        .corner-tl { top: -1px; left: -1px; border-right: 0; border-bottom: 0; }
+        .corner-tr { top: -1px; right: -1px; border-left: 0; border-bottom: 0; }
+        .corner-bl { bottom: -1px; left: -1px; border-right: 0; border-top: 0; }
+        .corner-br { bottom: -1px; right: -1px; border-left: 0; border-top: 0; }
+
+        .time-card:hover .corner {
+            width: 20px;
+            height: 20px;
+            box-shadow: 0 0 10px currentColor;
+        }
+
+        /* Glitch Effect on Hover */
+        .glitch-hover:hover {
+            animation: glitch 0.3s cubic-bezier(.25, .46, .45, .94) both infinite;
+        }
+
+        @keyframes glitch {
+            0% { transform: translate(0) }
+            20% { transform: translate(-2px, 2px) }
+            40% { transform: translate(-2px, -2px) }
+            60% { transform: translate(2px, 2px) }
+            80% { transform: translate(2px, -2px) }
+            100% { transform: translate(0) }
+        }
+
+        /* Header Animation */
+        .header-line {
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+        .header-line::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, white, transparent);
+            animation: scan 3s linear infinite;
+        }
+        @keyframes scan {
+            0% { left: -100%; }
+            100% { left: 200%; }
+        }
+
+        /* Loading/Startup Animation */
+        .startup-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #000;
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            animation: fadeOut 0.5s ease-out 1.5s forwards;
+        }
+        @keyframes fadeOut {
+            to { opacity: 0; visibility: hidden; }
+        }
+        .loader-bar {
+            width: 300px;
+            height: 4px;
+            background: #111;
+            margin-top: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        .loader-progress {
+            position: absolute;
+            top: 0; left: 0; height: 100%; width: 0%;
+            background: var(--neon-cyan);
+            box-shadow: 0 0 20px var(--neon-cyan);
+            animation: load 1.5s ease-out forwards;
+        }
+        @keyframes load { to { width: 100%; } }
+
     </style>
 </head>
-<body class="text-slate-200 min-h-screen flex flex-col">
+<body class="flex flex-col items-center justify-center p-4 md:p-8">
 
-    <!-- CRT Overlay -->
-    <div class="scanlines"></div>
+    <!-- Background Effects -->
+    <div class="grid-bg"></div>
+    <div class="crt-overlay"></div>
+    <div class="crt-flicker"></div>
 
-    <!-- Header -->
-    <header class="bg-slate-900 border-b-4 border-slate-700 p-4 relative z-10">
-        <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <div class="flex items-center gap-4">
-                <div class="w-3 h-12 bg-yellow-500 rounded-sm shadow-[0_0_15px_rgba(234,179,8,0.6)]"></div>
-                <div>
-                    <h1 class="text-4xl font-bold tracking-wider text-white uppercase glow-text">Aero<span class="text-yellow-500">Sync</span></h1>
-                    <p class="text-slate-400 text-sm tracking-[0.3em] uppercase">Global Operations Center</p>
-                </div>
+    <!-- Startup Screen -->
+    <div class="startup-overlay">
+        <div class="text-4xl font-bold tracking-[0.5em] text-white animate-pulse">TIMEBOARD</div>
+        <div class="text-xs text-cyan-400 mt-2 font-mono-tech">INITIALIZING TEMPORAL SYNC...</div>
+        <div class="loader-bar"><div class="loader-progress"></div></div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="w-full max-w-7xl relative z-10 flex flex-col gap-8">
+        
+        <!-- Header -->
+        <header class="text-center mb-4 relative">
+            <div class="flex items-center justify-center gap-4 mb-2">
+                <div class="h-[1px] w-12 bg-cyan-500"></div>
+                <h1 class="text-5xl md:text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-100 to-slate-400 glow-text-cyan">
+                    TIMEBOARD
+                </h1>
+                <div class="h-[1px] w-12 bg-cyan-500"></div>
             </div>
-            <div class="hidden md:flex items-center gap-2 text-red-500 font-bold animate-pulse">
-                <span class="w-3 h-3 bg-red-500 rounded-full"></span>
-                LIVE MONITORING
-            </div>
-        </div>
-    </header>
+            <div class="header-line max-w-md mx-auto"></div>
+            <p class="text-cyan-500/60 text-xs tracking-[0.4em] mt-2 font-mono-tech uppercase">Chrono-Synchronization Active</p>
+        </header>
 
-    <!-- Main Clock Board -->
-    <main class="flex-grow p-4 md:p-8 relative z-10">
-        <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+        <!-- Clock Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 w-full">
             
             <!-- Colorado Springs -->
-            <div class="bg-slate-800 border border-slate-600 rounded-lg p-6 shadow-2xl relative overflow-hidden group">
-                <div class="absolute top-0 right-0 bg-blue-600 text-xs font-bold px-2 py-1 rounded-bl">MST/MDT</div>
-                <h2 class="text-slate-400 text-lg uppercase tracking-widest mb-2">Colorado Springs</h2>
-                <div class="text-5xl font-mono-digital text-blue-400 glow-text mb-2" id="time-cos">--:--:--</div>
-                <div class="flex justify-between items-end">
-                    <span class="text-slate-500 text-sm font-mono" id="date-cos">---</span>
-                    <span class="text-xs bg-slate-700 px-2 py-1 rounded text-slate-300">USA</span>
+            <div class="time-card p-8 flex flex-col items-center justify-center min-h-[240px] text-cyan-400 group cursor-default">
+                <div class="corner corner-tl"></div><div class="corner corner-tr"></div>
+                <div class="corner corner-bl"></div><div class="corner corner-br"></div>
+                
+                <div class="text-xs tracking-[0.5em] text-cyan-200/50 mb-4 font-bold uppercase group-hover:text-cyan-400 transition-colors">Colorado Springs</div>
+                <div class="text-6xl md:text-7xl font-mono-tech font-bold glow-text-cyan tracking-wider glitch-hover" id="time-cos">00:00:00</div>
+                <div class="mt-4 flex items-center gap-3">
+                    <span class="px-2 py-1 border border-cyan-500/30 text-[10px] rounded bg-cyan-900/10 text-cyan-300">MST/MDT</span>
+                    <span class="text-sm text-cyan-300/60 font-mono-tech" id="date-cos">---</span>
                 </div>
-                <div class="absolute bottom-0 left-0 w-full h-1 bg-blue-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
+
+                <!-- Segmented Underglow -->
+                <div class="underglow-container text-cyan-400">
+                    <div class="glow-segment"></div><div class="glow-segment"></div>
+                    <div class="glow-segment"></div><div class="glow-segment"></div>
+                    <div class="glow-segment"></div><div class="glow-segment"></div>
+                    <div class="glow-segment"></div><div class="glow-segment"></div>
+                </div>
             </div>
 
             <!-- New York -->
-            <div class="bg-slate-800 border border-slate-600 rounded-lg p-6 shadow-2xl relative overflow-hidden group">
-                <div class="absolute top-0 right-0 bg-yellow-600 text-xs font-bold px-2 py-1 rounded-bl">EST/EDT</div>
-                <h2 class="text-slate-400 text-lg uppercase tracking-widest mb-2">New York</h2>
-                <div class="text-5xl font-mono-digital text-yellow-400 glow-text mb-2" id="time-nyc">--:--:--</div>
-                <div class="flex justify-between items-end">
-                    <span class="text-slate-500 text-sm font-mono" id="date-nyc">---</span>
-                    <span class="text-xs bg-slate-700 px-2 py-1 rounded text-slate-300">USA</span>
+            <div class="time-card p-8 flex flex-col items-center justify-center min-h-[240px] text-pink-500 group cursor-default">
+                <div class="corner corner-tl"></div><div class="corner corner-tr"></div>
+                <div class="corner corner-bl"></div><div class="corner corner-br"></div>
+                
+                <div class="text-xs tracking-[0.5em] text-pink-200/50 mb-4 font-bold uppercase group-hover:text-pink-500 transition-colors">New York City</div>
+                <div class="text-6xl md:text-7xl font-mono-tech font-bold glow-text-pink tracking-wider glitch-hover" id="time-nyc">00:00:00</div>
+                <div class="mt-4 flex items-center gap-3">
+                    <span class="px-2 py-1 border border-pink-500/30 text-[10px] rounded bg-pink-900/10 text-pink-300">EST/EDT</span>
+                    <span class="text-sm text-pink-300/60 font-mono-tech" id="date-nyc">---</span>
                 </div>
-                <div class="absolute bottom-0 left-0 w-full h-1 bg-yellow-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
+
+                <div class="underglow-container text-pink-500">
+                    <div class="glow-segment"></div><div class="glow-segment"></div>
+                    <div class="glow-segment"></div><div class="glow-segment"></div>
+                    <div class="glow-segment"></div><div class="glow-segment"></div>
+                    <div class="glow-segment"></div><div class="glow-segment"></div>
+                </div>
             </div>
 
             <!-- Shenzhen -->
-            <div class="bg-slate-800 border border-slate-600 rounded-lg p-6 shadow-2xl relative overflow-hidden group">
-                <div class="absolute top-0 right-0 bg-green-600 text-xs font-bold px-2 py-1 rounded-bl">CST</div>
-                <h2 class="text-slate-400 text-lg uppercase tracking-widest mb-2">Shenzhen</h2>
-                <div class="text-5xl font-mono-digital text-green-400 glow-text mb-2" id="time-shen">--:--:--</div>
-                <div class="flex justify-between items-end">
-                    <span class="text-slate-500 text-sm font-mono" id="date-shen">---</span>
-                    <span class="text-xs bg-slate-700 px-2 py-1 rounded text-slate-300">CHINA</span>
+            <div class="time-card p-8 flex flex-col items-center justify-center min-h-[240px] text-lime-400 group cursor-default">
+                <div class="corner corner-tl"></div><div class="corner corner-tr"></div>
+                <div class="corner corner-bl"></div><div class="corner corner-br"></div>
+                
+                <div class="text-xs tracking-[0.5em] text-lime-200/50 mb-4 font-bold uppercase group-hover:text-lime-400 transition-colors">Shenzhen</div>
+                <div class="text-6xl md:text-7xl font-mono-tech font-bold glow-text-lime tracking-wider glitch-hover" id="time-shen">00:00:00</div>
+                <div class="mt-4 flex items-center gap-3">
+                    <span class="px-2 py-1 border border-lime-500/30 text-[10px] rounded bg-lime-900/10 text-lime-300">CST</span>
+                    <span class="text-sm text-lime-300/60 font-mono-tech" id="date-shen">---</span>
                 </div>
-                <div class="absolute bottom-0 left-0 w-full h-1 bg-green-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
-            </div>
 
-            <!-- GMT / UTC -->
-            <div class="bg-slate-800 border-2 border-white/20 rounded-lg p-6 shadow-2xl relative overflow-hidden group bg-gradient-to-br from-slate-800 to-slate-900">
-                <div class="absolute top-0 right-0 bg-white text-slate-900 text-xs font-bold px-2 py-1 rounded-bl">UTC+0</div>
-                <h2 class="text-slate-400 text-lg uppercase tracking-widest mb-2">Greenwich Mean</h2>
-                <div class="text-5xl font-mono-digital text-white glow-text mb-2" id="time-gmt">--:--:--</div>
-                <div class="flex justify-between items-end">
-                    <span class="text-slate-500 text-sm font-mono" id="date-gmt">---</span>
-                    <span class="text-xs bg-slate-700 px-2 py-1 rounded text-slate-300">GMT</span>
+                <div class="underglow-container text-lime-400">
+                    <div class="glow-segment"></div><div class="glow-segment"></div>
+                    <div class="glow-segment"></div><div class="glow-segment"></div>
+                    <div class="glow-segment"></div><div class="glow-segment"></div>
+                    <div class="glow-segment"></div><div class="glow-segment"></div>
                 </div>
-                <div class="absolute bottom-0 left-0 w-full h-1 bg-white transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
             </div>
+
+            <!-- GMT -->
+            <div class="time-card p-8 flex flex-col items-center justify-center min-h-[240px] text-amber-500 group cursor-default">
+                <div class="corner corner-tl"></div><div class="corner corner-tr"></div>
+                <div class="corner corner-bl"></div><div class="corner corner-br"></div>
+                
+                <div class="text-xs tracking-[0.5em] text-amber-200/50 mb-4 font-bold uppercase group-hover:text-amber-500 transition-colors">Greenwich Mean</div>
+                <div class="text-6xl md:text-7xl font-mono-tech font-bold glow-text-amber tracking-wider glitch-hover" id="time-gmt">00:00:00</div>
+                <div class="mt-4 flex items-center gap-3">
+                    <span class="px-2 py-1 border border-amber-500/30 text-[10px] rounded bg-amber-900/10 text-amber-300">GMT/BST</span>
+                    <span class="text-sm text-amber-300/60 font-mono-tech" id="date-gmt">---</span>
+                </div>
+
+                <div class="underglow-container text-amber-500">
+                    <div class="glow-segment"></div><div class="glow-segment"></div>
+                    <div class="glow-segment"></div><div class="glow-segment"></div>
+                    <div class="glow-segment"></div><div class="glow-segment"></div>
+                    <div class="glow-segment"></div><div class="glow-segment"></div>
+                </div>
+            </div>
+
         </div>
 
-        <!-- Flight Data Table Simulation -->
-        <div class="bg-slate-900 border border-slate-700 rounded-lg overflow-hidden shadow-2xl">
-            <div class="bg-slate-800 p-3 border-b border-slate-700 flex justify-between items-center">
-                <h3 class="text-xl font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
-                    Active Flights & Logistics
-                </h3>
-                <div class="text-xs text-slate-500 font-mono">REF: <span id="refresh-timer">UPDATING...</span></div>
+        <!-- Footer Status -->
+        <footer class="flex justify-between items-end text-[10px] text-slate-600 font-mono-tech uppercase tracking-widest mt-4 px-2">
+            <div>
+                <span class="text-cyan-500/50">SYS.STATUS:</span> ONLINE<br>
+                <span class="text-cyan-500/50">LATENCY:</span> 0ms
             </div>
-            
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-slate-800/50 text-slate-400 text-sm uppercase tracking-wider border-b border-slate-700">
-                            <th class="p-4 font-semibold">Flight</th>
-                            <th class="p-4 font-semibold">Destination</th>
-                            <th class="p-4 font-semibold">Local Time</th>
-                            <th class="p-4 font-semibold">Status</th>
-                            <th class="p-4 font-semibold text-right">Gate/Info</th>
-                        </tr>
-                    </thead>
-                    <tbody class="text-sm font-mono-digital divide-y divide-slate-800" id="flight-table">
-                        <!-- Populated by JS -->
-                    </tbody>
-                </table>
+            <div class="text-right">
+                <span class="animate-pulse text-green-500">●</span> SYNCED<br>
+                TIMEBOARD v2.0
             </div>
-        </div>
-    </main>
+        </footer>
 
-    <!-- Footer Ticker -->
-    <footer class="bg-yellow-600 text-black font-bold py-2 overflow-hidden relative z-10 border-t-4 border-yellow-700">
-        <div class="whitespace-nowrap flex">
-            <div class="scroll-ticker inline-block px-4">
-                SECURITY ADVISORY: All passengers must report to terminals 90 minutes prior to departure. 
-                WEATHER UPDATE: Colorado Springs visibility clear. New York JFK experiencing light delays. 
-                SHENZHEN BAO'AN: Normal operations. 
-                GMT SYNC: All systems nominal.
-            </div>
-            <div class="scroll-ticker inline-block px-4">
-                SECURITY ADVISORY: All passengers must report to terminals 90 minutes prior to departure. 
-                WEATHER UPDATE: Colorado Springs visibility clear. New York JFK experiencing light delays. 
-                SHENZHEN BAO'AN: Normal operations. 
-                GMT SYNC: All systems nominal.
-            </div>
-        </div>
-    </footer>
+    </div>
 
     <script>
-        // Configuration for Timezones
+        // Locations Configuration
         const locations = [
-            { id: 'cos', zone: 'America/Denver', label: 'Colorado Springs' },
-            { id: 'nyc', zone: 'America/New_York', label: 'New York' },
-            { id: 'shen', zone: 'Asia/Shanghai', label: 'Shenzhen' },
-            { id: 'gmt', zone: 'Europe/London', label: 'Greenwich' } // Using London for GMT/BST handling
+            { id: 'cos', zone: 'America/Denver', color: 'cyan' },
+            { id: 'nyc', zone: 'America/New_York', color: 'pink' },
+            { id: 'shen', zone: 'Asia/Shanghai', color: 'lime' },
+            { id: 'gmt', zone: 'Europe/London', color: 'amber' }
         ];
 
-        // Mock Flight Data Generator
-        const destinations = [
-            { code: 'COS', city: 'Colorado Springs', zone: 'America/Denver' },
-            { code: 'JFK', city: 'New York', zone: 'America/New_York' },
-            { code: 'SZX', city: 'Shenzhen', zone: 'Asia/Shanghai' },
-            { code: 'LHR', city: 'London', zone: 'Europe/London' },
-            { code: 'HKG', city: 'Hong Kong', zone: 'Asia/Hong_Kong' },
-            { code: 'DEN', city: 'Denver', zone: 'America/Denver' }
-        ];
-
-        const statuses = [
-            { text: 'ON TIME', color: 'text-green-400' },
-            { text: 'BOARDING', color: 'text-yellow-400 blink' },
-            { text: 'DEPARTED', color: 'text-blue-400' },
-            { text: 'DELAYED', color: 'text-red-500' },
-            { text: 'SCHEDULED', color: 'text-slate-400' }
-        ];
-
-        function updateClocks() {
+        function updateTime() {
             const now = new Date();
 
             locations.forEach(loc => {
-                // Time
-                const timeString = new Intl.DateTimeFormat('en-US', {
+                // Format Time
+                const timeFormatter = new Intl.DateTimeFormat('en-US', {
                     timeZone: loc.zone,
                     hour12: false,
                     hour: '2-digit',
                     minute: '2-digit',
                     second: '2-digit'
-                }).format(now);
+                });
                 
-                // Date
-                const dateString = new Intl.DateTimeFormat('en-US', {
+                // Format Date
+                const dateFormatter = new Intl.DateTimeFormat('en-US', {
                     timeZone: loc.zone,
                     weekday: 'short',
+                    year: 'numeric',
                     month: 'short',
                     day: 'numeric'
-                }).format(now);
+                });
+
+                const timeStr = timeFormatter.format(now);
+                const dateStr = dateFormatter.format(now);
 
                 const timeEl = document.getElementById(`time-${loc.id}`);
                 const dateEl = document.getElementById(`date-${loc.id}`);
-                
-                if(timeEl) timeEl.textContent = timeString;
-                if(dateEl) dateEl.textContent = dateString;
+
+                if (timeEl) timeEl.textContent = timeStr;
+                if (dateEl) dateEl.textContent = dateStr;
             });
 
-            // Update refresh indicator
-            const refreshEl = document.getElementById('refresh-timer');
-            if(refreshEl) refreshEl.textContent = now.toISOString().split('T')[1].split('.')[0] + 'Z';
+            requestAnimationFrame(updateTime);
         }
 
-        function generateFlights() {
-            const tbody = document.getElementById('flight-table');
-            tbody.innerHTML = '';
-            
-            // Generate 6 random flights
-            for(let i=0; i<6; i++) {
-                const dest = destinations[Math.floor(Math.random() * destinations.length)];
-                const status = statuses[Math.floor(Math.random() * statuses.length)];
-                const flightNum = `AS${Math.floor(100 + Math.random() * 899)}`;
-                
-                // Calculate a random time near current time in that destination
-                const destTime = new Date().toLocaleTimeString('en-US', { 
-                    timeZone: dest.zone, 
-                    hour12: false, 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                });
+        // Start the loop
+        updateTime();
 
-                const tr = document.createElement('tr');
-                tr.className = 'flight-row border-b border-slate-800/50 hover:bg-slate-800/30';
-                tr.innerHTML = `
-                    <td class="p-4 text-yellow-500 font-bold">${flightNum}</td>
-                    <td class="p-4 text-slate-300">${dest.city} <span class="text-xs text-slate-500 ml-1">(${dest.code})</span></td>
-                    <td class="p-4 text-slate-200">${destTime}</td>
-                    <td class="p-4 font-bold ${status.color}">${status.text}</td>
-                    <td class="p-4 text-right text-slate-500">T${Math.floor(1 + Math.random() * 20)}</td>
-                `;
-                tbody.appendChild(tr);
-            }
-        }
-
-        // Initialize
-        updateClocks();
-        generateFlights();
-        
-        // Update clocks every second
-        setInterval(updateClocks, 1000);
-        
-        // Update flight board every 30 seconds to simulate live data
-        setInterval(generateFlights, 30000);
+        // Add random glitch effects occasionally
+        setInterval(() => {
+            const cards = document.querySelectorAll('.time-card');
+            const randomCard = cards[Math.floor(Math.random() * cards.length)];
+            randomCard.style.transform = 'translateX(2px)';
+            setTimeout(() => {
+                randomCard.style.transform = 'translateX(0)';
+            }, 50);
+        }, 5000);
 
     </script>
 </body>
