@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Flight Board | Time Monitor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --led-yellow: #facc15;
+            --led-red: #ef4444;
+            --led-green: #22c55e;
+            --led-blue: #3b82f6;
+            --bg-dark: #0f172a;
+            --panel-bg: #1e293b;
+        }
+
+        body {
+            background-color: #000;
+            font-family: 'Rajdhani', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .font-mono-digital {
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        /* CRT Scanline Effect */
+        .scanlines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                to bottom,
+                rgba(255,255,255,0),
+                rgba(255,255,255,0) 50%,
+                rgba(0,0,0,0.2) 50%,
+                rgba(0,0,0,0.2)
+            );
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 50;
+            opacity: 0.6;
+        }
+
+        .glow-text {
+            text-shadow: 0 0 10px currentColor;
+        }
+
+        .blink {
+            animation: blinker 1.5s linear infinite;
+        }
+
+        @keyframes blinker {
+            50% { opacity: 0; }
+        }
+
+        .scroll-ticker {
+            animation: ticker 30s linear infinite;
+        }
+
+        @keyframes ticker {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155; 
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569; 
+        }
+
+        .flight-row {
+            transition: all 0.3s ease;
+        }
+        .flight-row:hover {
+            background-color: rgba(255,255,255,0.05);
+        }
+    </style>
+</head>
+<body class="text-slate-200 min-h-screen flex flex-col">
+
+    <!-- CRT Overlay -->
+    <div class="scanlines"></div>
+
+    <!-- Header -->
+    <header class="bg-slate-900 border-b-4 border-slate-700 p-4 relative z-10">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <div class="w-3 h-12 bg-yellow-500 rounded-sm shadow-[0_0_15px_rgba(234,179,8,0.6)]"></div>
+                <div>
+                    <h1 class="text-4xl font-bold tracking-wider text-white uppercase glow-text">Aero<span class="text-yellow-500">Sync</span></h1>
+                    <p class="text-slate-400 text-sm tracking-[0.3em] uppercase">Global Operations Center</p>
+                </div>
+            </div>
+            <div class="hidden md:flex items-center gap-2 text-red-500 font-bold animate-pulse">
+                <span class="w-3 h-3 bg-red-500 rounded-full"></span>
+                LIVE MONITORING
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Clock Board -->
+    <main class="flex-grow p-4 md:p-8 relative z-10">
+        <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            
+            <!-- Colorado Springs -->
+            <div class="bg-slate-800 border border-slate-600 rounded-lg p-6 shadow-2xl relative overflow-hidden group">
+                <div class="absolute top-0 right-0 bg-blue-600 text-xs font-bold px-2 py-1 rounded-bl">MST/MDT</div>
+                <h2 class="text-slate-400 text-lg uppercase tracking-widest mb-2">Colorado Springs</h2>
+                <div class="text-5xl font-mono-digital text-blue-400 glow-text mb-2" id="time-cos">--:--:--</div>
+                <div class="flex justify-between items-end">
+                    <span class="text-slate-500 text-sm font-mono" id="date-cos">---</span>
+                    <span class="text-xs bg-slate-700 px-2 py-1 rounded text-slate-300">USA</span>
+                </div>
+                <div class="absolute bottom-0 left-0 w-full h-1 bg-blue-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
+            </div>
+
+            <!-- New York -->
+            <div class="bg-slate-800 border border-slate-600 rounded-lg p-6 shadow-2xl relative overflow-hidden group">
+                <div class="absolute top-0 right-0 bg-yellow-600 text-xs font-bold px-2 py-1 rounded-bl">EST/EDT</div>
+                <h2 class="text-slate-400 text-lg uppercase tracking-widest mb-2">New York</h2>
+                <div class="text-5xl font-mono-digital text-yellow-400 glow-text mb-2" id="time-nyc">--:--:--</div>
+                <div class="flex justify-between items-end">
+                    <span class="text-slate-500 text-sm font-mono" id="date-nyc">---</span>
+                    <span class="text-xs bg-slate-700 px-2 py-1 rounded text-slate-300">USA</span>
+                </div>
+                <div class="absolute bottom-0 left-0 w-full h-1 bg-yellow-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
+            </div>
+
+            <!-- Shenzhen -->
+            <div class="bg-slate-800 border border-slate-600 rounded-lg p-6 shadow-2xl relative overflow-hidden group">
+                <div class="absolute top-0 right-0 bg-green-600 text-xs font-bold px-2 py-1 rounded-bl">CST</div>
+                <h2 class="text-slate-400 text-lg uppercase tracking-widest mb-2">Shenzhen</h2>
+                <div class="text-5xl font-mono-digital text-green-400 glow-text mb-2" id="time-shen">--:--:--</div>
+                <div class="flex justify-between items-end">
+                    <span class="text-slate-500 text-sm font-mono" id="date-shen">---</span>
+                    <span class="text-xs bg-slate-700 px-2 py-1 rounded text-slate-300">CHINA</span>
+                </div>
+                <div class="absolute bottom-0 left-0 w-full h-1 bg-green-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
+            </div>
+
+            <!-- GMT / UTC -->
+            <div class="bg-slate-800 border-2 border-white/20 rounded-lg p-6 shadow-2xl relative overflow-hidden group bg-gradient-to-br from-slate-800 to-slate-900">
+                <div class="absolute top-0 right-0 bg-white text-slate-900 text-xs font-bold px-2 py-1 rounded-bl">UTC+0</div>
+                <h2 class="text-slate-400 text-lg uppercase tracking-widest mb-2">Greenwich Mean</h2>
+                <div class="text-5xl font-mono-digital text-white glow-text mb-2" id="time-gmt">--:--:--</div>
+                <div class="flex justify-between items-end">
+                    <span class="text-slate-500 text-sm font-mono" id="date-gmt">---</span>
+                    <span class="text-xs bg-slate-700 px-2 py-1 rounded text-slate-300">GMT</span>
+                </div>
+                <div class="absolute bottom-0 left-0 w-full h-1 bg-white transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
+            </div>
+        </div>
+
+        <!-- Flight Data Table Simulation -->
+        <div class="bg-slate-900 border border-slate-700 rounded-lg overflow-hidden shadow-2xl">
+            <div class="bg-slate-800 p-3 border-b border-slate-700 flex justify-between items-center">
+                <h3 class="text-xl font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                    Active Flights & Logistics
+                </h3>
+                <div class="text-xs text-slate-500 font-mono">REF: <span id="refresh-timer">UPDATING...</span></div>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-800/50 text-slate-400 text-sm uppercase tracking-wider border-b border-slate-700">
+                            <th class="p-4 font-semibold">Flight</th>
+                            <th class="p-4 font-semibold">Destination</th>
+                            <th class="p-4 font-semibold">Local Time</th>
+                            <th class="p-4 font-semibold">Status</th>
+                            <th class="p-4 font-semibold text-right">Gate/Info</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm font-mono-digital divide-y divide-slate-800" id="flight-table">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer Ticker -->
+    <footer class="bg-yellow-600 text-black font-bold py-2 overflow-hidden relative z-10 border-t-4 border-yellow-700">
+        <div class="whitespace-nowrap flex">
+            <div class="scroll-ticker inline-block px-4">
+                SECURITY ADVISORY: All passengers must report to terminals 90 minutes prior to departure. 
+                WEATHER UPDATE: Colorado Springs visibility clear. New York JFK experiencing light delays. 
+                SHENZHEN BAO'AN: Normal operations. 
+                GMT SYNC: All systems nominal.
+            </div>
+            <div class="scroll-ticker inline-block px-4">
+                SECURITY ADVISORY: All passengers must report to terminals 90 minutes prior to departure. 
+                WEATHER UPDATE: Colorado Springs visibility clear. New York JFK experiencing light delays. 
+                SHENZHEN BAO'AN: Normal operations. 
+                GMT SYNC: All systems nominal.
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Configuration for Timezones
+        const locations = [
+            { id: 'cos', zone: 'America/Denver', label: 'Colorado Springs' },
+            { id: 'nyc', zone: 'America/New_York', label: 'New York' },
+            { id: 'shen', zone: 'Asia/Shanghai', label: 'Shenzhen' },
+            { id: 'gmt', zone: 'Europe/London', label: 'Greenwich' } // Using London for GMT/BST handling
+        ];
+
+        // Mock Flight Data Generator
+        const destinations = [
+            { code: 'COS', city: 'Colorado Springs', zone: 'America/Denver' },
+            { code: 'JFK', city: 'New York', zone: 'America/New_York' },
+            { code: 'SZX', city: 'Shenzhen', zone: 'Asia/Shanghai' },
+            { code: 'LHR', city: 'London', zone: 'Europe/London' },
+            { code: 'HKG', city: 'Hong Kong', zone: 'Asia/Hong_Kong' },
+            { code: 'DEN', city: 'Denver', zone: 'America/Denver' }
+        ];
+
+        const statuses = [
+            { text: 'ON TIME', color: 'text-green-400' },
+            { text: 'BOARDING', color: 'text-yellow-400 blink' },
+            { text: 'DEPARTED', color: 'text-blue-400' },
+            { text: 'DELAYED', color: 'text-red-500' },
+            { text: 'SCHEDULED', color: 'text-slate-400' }
+        ];
+
+        function updateClocks() {
+            const now = new Date();
+
+            locations.forEach(loc => {
+                // Time
+                const timeString = new Intl.DateTimeFormat('en-US', {
+                    timeZone: loc.zone,
+                    hour12: false,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                }).format(now);
+                
+                // Date
+                const dateString = new Intl.DateTimeFormat('en-US', {
+                    timeZone: loc.zone,
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric'
+                }).format(now);
+
+                const timeEl = document.getElementById(`time-${loc.id}`);
+                const dateEl = document.getElementById(`date-${loc.id}`);
+                
+                if(timeEl) timeEl.textContent = timeString;
+                if(dateEl) dateEl.textContent = dateString;
+            });
+
+            // Update refresh indicator
+            const refreshEl = document.getElementById('refresh-timer');
+            if(refreshEl) refreshEl.textContent = now.toISOString().split('T')[1].split('.')[0] + 'Z';
+        }
+
+        function generateFlights() {
+            const tbody = document.getElementById('flight-table');
+            tbody.innerHTML = '';
+            
+            // Generate 6 random flights
+            for(let i=0; i<6; i++) {
+                const dest = destinations[Math.floor(Math.random() * destinations.length)];
+                const status = statuses[Math.floor(Math.random() * statuses.length)];
+                const flightNum = `AS${Math.floor(100 + Math.random() * 899)}`;
+                
+                // Calculate a random time near current time in that destination
+                const destTime = new Date().toLocaleTimeString('en-US', { 
+                    timeZone: dest.zone, 
+                    hour12: false, 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+
+                const tr = document.createElement('tr');
+                tr.className = 'flight-row border-b border-slate-800/50 hover:bg-slate-800/30';
+                tr.innerHTML = `
+                    <td class="p-4 text-yellow-500 font-bold">${flightNum}</td>
+                    <td class="p-4 text-slate-300">${dest.city} <span class="text-xs text-slate-500 ml-1">(${dest.code})</span></td>
+                    <td class="p-4 text-slate-200">${destTime}</td>
+                    <td class="p-4 font-bold ${status.color}">${status.text}</td>
+                    <td class="p-4 text-right text-slate-500">T${Math.floor(1 + Math.random() * 20)}</td>
+                `;
+                tbody.appendChild(tr);
+            }
+        }
+
+        // Initialize
+        updateClocks();
+        generateFlights();
+        
+        // Update clocks every second
+        setInterval(updateClocks, 1000);
+        
+        // Update flight board every 30 seconds to simulate live data
+        setInterval(generateFlights, 30000);
+
+    </script>
+</body>
+</html>
